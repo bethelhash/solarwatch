@@ -599,7 +599,7 @@ footer a:hover { color:var(--blue-l); }
       <span id="keyBtnText">Enter Pro Key</span>
     </button>
   </div>
-</header>
+<span id="st-hdr-btn" style="margin-left:12px"></span></header>
 
 <!-- KEY PANEL -->
 <div class="key-panel" id="keyPanel">
@@ -1388,6 +1388,199 @@ document.addEventListener('click', e => {
     document.getElementById('keyPanel').classList.remove('open');
   }
 });
+</script>
+
+<!-- ============================================================
+     SOLARTRUTH PLAN PANEL
+     ============================================================ -->
+<style>
+.st-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:9000;display:none;align-items:center;justify-content:center;padding:1rem}
+.st-overlay.open{display:flex}
+.st-panel{background:#06101e;border:1px solid #1a2a45;width:100%;max-width:840px;max-height:90vh;overflow-y:auto;animation:stSlide 0.25s ease;position:relative;font-family:'DM Mono',monospace}
+@keyframes stSlide{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.st-ph{padding:1rem 1.5rem;border-bottom:1px solid #1a2a45;display:flex;align-items:center;justify-content:space-between;background:#040c18;position:sticky;top:0;z-index:2}
+.st-ph-title{font-size:10px;letter-spacing:0.16em;color:#3a5a80;text-transform:uppercase}
+.st-ph-close{background:none;border:none;color:#2a4060;font-size:1.2rem;cursor:pointer;padding:0 4px;line-height:1;transition:color 0.15s}
+.st-ph-close:hover{color:#e8a020}
+.st-ks{padding:1rem 1.5rem;border-bottom:1px solid #1a2a45;background:#060e1c}
+.st-ks-label{font-size:9px;letter-spacing:0.12em;color:#2a4060;text-transform:uppercase;margin-bottom:6px}
+.st-ks-row{display:flex;gap:8px;margin-bottom:6px}
+.st-ki{flex:1;background:#040c18;border:1px solid #1a2a45;color:#c8daf0;font-family:'DM Mono',monospace;font-size:12px;padding:9px 12px;outline:none;transition:border-color 0.15s}
+.st-ki:focus{border-color:#2a7fd4}
+.st-ki::placeholder{color:#1a3060}
+.st-vb{background:#2a7fd4;color:#fff;border:none;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:9px 18px;cursor:pointer;transition:background 0.15s;white-space:nowrap}
+.st-vb:hover{background:#4a9de8}
+.st-ks-status{font-size:10px;min-height:16px}
+.st-ks-status.ok{color:#00e096}
+.st-ks-status.fail{color:#ff4040}
+.st-ps{padding:1.2rem 1.5rem}
+.st-note{font-size:10px;color:#2a4060;line-height:1.6;padding:10px 12px;border:1px solid #1a2a45;background:#040c18;margin-bottom:1rem}
+.st-note strong{color:#5a7a9a}
+.st-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#1a2a45;border:1px solid #1a2a45;margin-bottom:1rem}
+.st-plan{background:#060e1c;padding:1.2rem;display:flex;flex-direction:column;position:relative;transition:background 0.15s}
+.st-plan:hover{background:#08121e}
+.st-plan.st-rec{border-top:2px solid #e8a020}
+.st-rec-badge{position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:#e8a020;color:#060e1c;font-size:8px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:2px 10px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.st-pname{font-size:9px;letter-spacing:0.16em;color:#2a4060;text-transform:uppercase;margin-bottom:0.6rem}
+.st-price{font-size:1.7rem;font-weight:700;color:#c8daf0;line-height:1;margin-bottom:2px}
+.st-price span{font-size:0.85rem;font-weight:400;color:#2a4060}
+.st-period{font-size:9px;color:#2a4060;margin-bottom:0.9rem}
+.st-feats{list-style:none;display:flex;flex-direction:column;gap:5px;flex:1;margin-bottom:1rem}
+.st-feats li{font-size:10px;color:#3a5a70;display:flex;gap:6px;align-items:flex-start;line-height:1.4}
+.st-feats li::before{content:"—";color:#1a3060;flex-shrink:0}
+.st-feats li.y::before{content:"✓";color:#2a7fd4}
+.st-feats li.s::before{content:"★";color:#e8a020}
+.st-cta{display:block;text-align:center;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:10px;text-decoration:none;cursor:pointer;transition:all 0.15s;border:none;width:100%}
+.st-cta.fr{background:#1a2a45;color:#3a5a70}
+.st-cta.fr:hover{background:#1e3050;color:#5a7a9a}
+.st-cta.pr{background:#2a7fd4;color:#fff}
+.st-cta.pr:hover{background:#4a9de8}
+.st-cta.ul{background:#e8a020;color:#060e1c;font-weight:700}
+.st-cta.ul:hover{background:#f0b030}
+.st-cta.cur{background:#00e096;color:#040c18;cursor:default}
+.st-wl{padding:10px 12px;background:rgba(232,160,32,0.06);border:1px solid rgba(232,160,32,0.2);margin-bottom:1rem;display:flex;gap:10px;align-items:flex-start}
+.st-wl-text{font-size:10px;color:#806020;line-height:1.6}
+.st-wl-text strong{color:#e8a020}
+.st-ent{padding:10px 12px;background:#040c18;border:1px solid #1a2a45;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.st-ent-text{font-size:10px;color:#2a4060;line-height:1.5}
+.st-ent-text strong{color:#3a5a70}
+.st-ent-link{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#2a7fd4;text-decoration:none;border:1px solid #1a3060;padding:5px 12px;transition:all 0.15s;white-space:nowrap}
+.st-ent-link:hover{border-color:#2a7fd4;color:#4a9de8}
+@media(max-width:600px){.st-grid{grid-template-columns:1fr}}
+</style>
+
+<!-- Plan trigger button placeholder — injected inline -->
+<div id="st-trigger-wrap" style="display:inline-flex">
+  <button id="stPlanBtn" onclick="stOpen()" style="display:flex;align-items:center;gap:7px;background:transparent;border:1px solid #2a4060;color:#5a7a9a;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all 0.2s">
+    <span>⚷</span><span id="stBtnTxt">Plans &amp; Access</span>
+  </button>
+</div>
+
+<!-- Overlay -->
+<div class="st-overlay" id="stOverlay" onclick="stBgClose(event)">
+<div class="st-panel">
+  <div class="st-ph">
+    <div class="st-ph-title" id="stPHTitle">SolarWatch — Plans &amp; Access</div>
+    <button class="st-ph-close" onclick="stClose()">✕</button>
+  </div>
+  <div class="st-ks">
+    <div class="st-ks-label">Already subscribed on RapidAPI? Enter your key</div>
+    <div class="st-ks-row">
+      <input class="st-ki" id="stKeyIn" type="password" placeholder="Paste your RapidAPI key…">
+      <button class="st-vb" onclick="stVerify()">Verify</button>
+    </div>
+    <div class="st-ks-status" id="stKStatus"></div>
+  </div>
+  <div class="st-ps">
+    <div class="st-note">
+      <strong>API access and tool access are separate.</strong>
+      You do not need to use the web tool to use the API.
+      Pro and Ultra subscribers get tool access as a perk at no extra cost.
+      If you only need API access for a personal project or platform build, Pro is all you need.
+    </div>
+    <div class="st-grid" id="stGrid"></div>
+    <div class="st-wl">
+      <span style="font-size:1rem;flex-shrink:0">★</span>
+      <div class="st-wl-text">
+        <strong>White label is Ultra only.</strong>
+        Pro subscribers get full tool access but may not remove branding or embed the tool on a client-facing domain.
+        Ultra includes white label rights and requires approval — we will ask for your deployment domain before activating.
+      </div>
+    </div>
+    <div class="st-ent">
+      <div class="st-ent-text"><strong>Need all 7 APIs?</strong> Enterprise bundle with all APIs, custom SLA, and dedicated onboarding. Contact us for portfolio pricing.</div>
+      <a href="https://buildingiq-nu.vercel.app#contact" target="_blank" class="st-ent-link">Contact →</a>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+var ST={
+  pricingUrl:'https://rapidapi.com/bethelnedi/api/solar-o-m-performance-monitoring-api/pricing',
+  apiEndpoint:'https://amfumu-solar-om-api.hf.space',
+  proPrice:'$49',
+  ultraPrice:'$199',
+  proFeats:["Full maintenance schedule", "All 7 fault probabilities", "IRR impact analysis", "Batch fleet monitoring (50 systems)"],
+  ultraFeats:["White label SolarWatch for client reporting", "O&M contractor & asset manager use", "Your branding", "Requires approval"],
+  currentKey:'',
+  currentPlan:'free'
+};
+
+function stOpen(){document.getElementById('stOverlay').classList.add('open');stRender()}
+function stClose(){document.getElementById('stOverlay').classList.remove('open')}
+function stBgClose(e){if(e.target===document.getElementById('stOverlay'))stClose()}
+
+async function stVerify(){
+  var key=document.getElementById('stKeyIn').value.trim();
+  var s=document.getElementById('stKStatus');
+  if(!key){s.textContent='Please paste your API key.';s.className='st-ks-status fail';return}
+  s.textContent='Verifying…';s.className='st-ks-status';
+  var PRO=new Set(['PRO-KEY-SAMPLE-XYZ','PRO-OM-KEY-XYZ','PRO-AUDIT-KEY-XYZ','PRO-INCENTIVE-XYZ','PRO-EV-KEY-XYZ']);
+  var ULTRA=new Set(['ULTRA-KEY-SAMPLE-XYZ']);
+  var plan='free';
+  if(ULTRA.has(key)){plan='ultra'}
+  else if(PRO.has(key)||key.length>20){
+    try{
+      if(ST.apiEndpoint){
+        var r=await fetch(ST.apiEndpoint+'/health',{headers:{'X-API-Key':key}});
+        plan=r.ok?'pro':'free';
+      } else {plan='pro'}
+    }catch(e){plan='pro'}
+  }
+  if(plan!=='free'){
+    ST.currentKey=key;ST.currentPlan=plan;
+    var labels={pro:'Pro plan active',ultra:'Ultra plan active — white label enabled'};
+    s.textContent='✓ '+labels[plan]+'. Features unlocked.';
+    s.className='st-ks-status ok';
+    var b=document.getElementById('stPlanBtn');
+    var c=plan==='ultra'?'#e8a020':'#00e096';
+    b.style.borderColor=c;b.style.color=c;
+    document.getElementById('stBtnTxt').textContent=plan==='ultra'?'★ Ultra Active':'✓ Pro Active';
+    if(typeof onPlanActivated==='function')onPlanActivated(plan,key);
+    stRender();
+    setTimeout(stClose,1600);
+  } else {
+    s.textContent='Key not recognised. Check your RapidAPI subscription.';
+    s.className='st-ks-status fail';
+  }
+}
+
+function stRender(){
+  var cur=ST.currentPlan,pu=ST.pricingUrl;
+  var plans=[
+    {id:'free',name:'Free',price:'$0',period:'forever · no card needed',rec:false,ctaCls:cur==='free'?'cur':'fr',
+     ctaTxt:cur==='free'?'Current plan':'Free plan',href:null,
+     feats:[{y:true,t:'API access — 5 calls/min'},{t:'Tool access — Free plan only'},{t:'Full analysis features'},{t:'White label rights'}]},
+    {id:'pro',name:'Pro',price:ST.proPrice,period:'per month · cancel anytime',rec:false,ctaCls:cur==='pro'?'cur':'pr',
+     ctaTxt:cur==='pro'?'✓ Current plan':'Get Pro on RapidAPI',href:cur==='pro'?null:pu,
+     feats:[{y:true,t:'Full API — 1,000 calls/hr'},{s:true,t:'Tool access included as perk'},
+            ...ST.proFeats.map(f=>({y:true,t:f})),{t:'White label rights'}]},
+    {id:'ultra',name:'Ultra',price:ST.ultraPrice,period:'per month · requires approval',rec:true,ctaCls:cur==='ultra'?'cur':'ul',
+     ctaTxt:cur==='ultra'?'★ Current plan':'★ Get Ultra — White Label',href:cur==='ultra'?null:pu,
+     feats:[{y:true,t:'Everything in Pro'},...ST.ultraFeats.map(f=>({s:true,t:f}))]}
+  ];
+  document.getElementById('stGrid').innerHTML=plans.map(p=>`
+    <div class="st-plan${p.rec?' st-rec':''}">
+      ${p.rec?'<div class="st-rec-badge">★ Recommended for White Label</div>':''}
+      <div class="st-pname">${p.name}</div>
+      <div class="st-price">${p.price}<span>/mo</span></div>
+      <div class="st-period">${p.period}</div>
+      <ul class="st-feats">${p.feats.map(f=>`<li class="${f.s?'s':f.y?'y':''}">${f.t}</li>`).join('')}</ul>
+      ${p.href
+        ?`<a href="${p.href}" target="_blank" class="st-cta ${p.ctaCls}">${p.ctaTxt}</a>`
+        :`<button class="st-cta ${p.ctaCls}"${p.id===cur?' disabled':''}>${p.ctaTxt}</button>`}
+    </div>`).join('');
+}
+stRender();
+</script>
+
+<script>
+(function(){
+  var wrap=document.getElementById('st-trigger-wrap');
+  var slot=document.getElementById('st-hdr-btn');
+  if(wrap&&slot){slot.appendChild(wrap);}
+})();
 </script>
 </body>
 </html>
