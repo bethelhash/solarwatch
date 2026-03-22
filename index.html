@@ -788,7 +788,8 @@ footer a:hover { color:var(--blue-l); }
 </footer>
 
 <script>
-const API      = 'https://amfumu-solar-om-api.hf.space';
+const API        = 'https://solar-o-m-performance-monitoring-api.p.rapidapi.com';
+const RAPID_HOST = 'solar-o-m-performance-monitoring-api.p.rapidapi.com';
 const FREE_KEY = 'TEST-KEY-FREE-001';
 const PRO_KEYS = new Set(['PRO-OM-KEY-XYZ','PRO-KEY-SAMPLE-XYZ']);
 
@@ -909,7 +910,7 @@ async function runAnalysis() {
   try {
     const r = await fetch(`${API}${endpoint}`, {
       method:'POST',
-      headers:{'Content-Type':'application/json','X-API-Key':currentKey},
+      headers:{'Content-Type':'application/json','X-RapidAPI-Key':currentKey||ACTIVE_KEY||'','X-RapidAPI-Host':RAPID_HOST},
       body:JSON.stringify(body)
     });
     if (!r.ok) throw new Error(`API ${r.status}`);
@@ -1498,7 +1499,7 @@ document.addEventListener('click', e => {
 <script>
 var ST={
   pricingUrl:'https://rapidapi.com/bethelnedi/api/solar-o-m-performance-monitoring-api/pricing',
-  apiEndpoint:'https://amfumu-solar-om-api.hf.space',
+  apiEndpoint:'https://solar-o-m-performance-monitoring-api.p.rapidapi.com',
   proPrice:'$49',
   ultraPrice:'$199',
   proFeats:["Full maintenance schedule", "All 7 fault probabilities", "IRR impact analysis", "Batch fleet monitoring (50 systems)"],
@@ -1581,6 +1582,24 @@ stRender();
   var slot=document.getElementById('st-hdr-btn');
   if(wrap&&slot){slot.appendChild(wrap);}
 })();
+
+// ── FREE DAILY LIMIT ──
+// Free users (no key) get 1 analysis per day to protect RapidAPI quota
+function checkFreeLimit() {
+  const key = 'st_free_used_' + new Date().toISOString().slice(0,10);
+  const used = parseInt(localStorage.getItem(key) || '0');
+  return { used, key, allowed: used < 1 };
+}
+function markFreeUsed() {
+  const key = 'st_free_used_' + new Date().toISOString().slice(0,10);
+  localStorage.setItem(key, '1');
+}
+function freeLimitMessage() {
+  return `<div class="error-box" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+    <span>&#9888; Free limit reached — 1 analysis per day without a key. Get Pro for unlimited access.</span>
+    <button onclick="stOpen()" style="background:#e8a020;color:#0a0c0f;border:none;font-family:inherit;font-size:10px;font-weight:600;padding:6px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0">Get Pro</button>
+  </div>`;
+}
 </script>
 </body>
 </html>
