@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarWatch — O&M Performance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:      #040d1a;
+  --navy2:     #071428;
+  --navy3:     #0a1c38;
+  --navy4:     #0f2448;
+  --border:    #112240;
+  --border2:   #1a3560;
+  --blue:      #2a7fd4;
+  --blue-l:    #4a9de8;
+  --blue-d:    #0e4aa3;
+  --teal:      #00c8b4;
+  --teal-d:    #007a6e;
+  --green:     #00e096;
+  --green-d:   #007a48;
+  --amber:     #ffb020;
+  --amber-d:   #a06000;
+  --red:       #ff4040;
+  --red-d:     #8a0000;
+  --text:      #c8daf0;
+  --text2:     #7a9bc0;
+  --text3:     #3a5a80;
+  --dim:       #162040;
+  --syne:      'Syne', sans-serif;
+  --serif:     'Instrument Serif', serif;
+  --mono:      'DM Mono', monospace;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; }
+
+body {
+  background: var(--navy);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle star field background */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(42,127,212,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 15%, rgba(42,127,212,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 70%, rgba(0,200,180,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 10% 80%, rgba(42,127,212,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 60%, rgba(42,127,212,0.3) 0%, transparent 100%),
+    linear-gradient(180deg, rgba(7,20,40,0) 0%, rgba(4,13,26,1) 100%);
+  pointer-events:none; z-index:0;
+}
+
+/* ── HEADER ── */
+header {
+  position:sticky; top:0; z-index:200;
+  background: rgba(4,13,26,0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  height: 56px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+
+.logo {
+  display:flex; align-items:center; gap:12px; text-decoration:none;
+}
+.logo-icon {
+  width:34px; height:34px;
+  background: linear-gradient(135deg, var(--blue-d), var(--blue));
+  display:flex; align-items:center; justify-content:center;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+.logo-icon svg { width:16px; height:16px; }
+.logo-name {
+  font-family:var(--syne);
+  font-size:1.1rem; font-weight:700;
+  color:var(--text); letter-spacing:0.04em;
+}
+.logo-sub {
+  font-size:9px; color:var(--text3);
+  letter-spacing:0.1em; text-transform:uppercase;
+  margin-top:1px;
+}
+
+.header-right { display:flex; align-items:center; gap:16px; }
+
+.live-ind {
+  display:flex; align-items:center; gap:7px;
+  font-size:10px; color:var(--text3); letter-spacing:0.08em;
+}
+.live-dot {
+  width:6px; height:6px;
+  background:var(--green); border-radius:50%;
+  animation: glow 2s ease-in-out infinite;
+}
+@keyframes glow {
+  0%,100% { box-shadow:0 0 0 0 rgba(0,224,150,0.4); }
+  50%      { box-shadow:0 0 0 5px rgba(0,224,150,0); }
+}
+
+.key-btn {
+  display:flex; align-items:center; gap:7px;
+  background:var(--navy3); border:1px solid var(--border2);
+  color:var(--text2); font-family:var(--mono);
+  font-size:10px; letter-spacing:0.08em;
+  padding:6px 14px; cursor:pointer;
+  transition:all 0.2s;
+}
+.key-btn:hover { border-color:var(--blue); color:var(--blue-l); }
+.key-btn.active { border-color:var(--green); color:var(--green); }
+
+/* ── KEY PANEL ── */
+.key-panel {
+  position:fixed; top:56px; right:0;
+  width:380px; background:var(--navy2);
+  border-left:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  z-index:199; padding:1.4rem;
+  transform:translateX(100%);
+  transition:transform 0.3s cubic-bezier(.4,0,.2,1);
+}
+.key-panel.open { transform:translateX(0); }
+
+.kp-title {
+  font-family:var(--syne); font-size:0.95rem; font-weight:600;
+  color:var(--text); margin-bottom:0.3rem;
+}
+.kp-desc {
+  font-size:11px; color:var(--text3); line-height:1.6;
+  margin-bottom:1rem;
+}
+.kp-input-wrap { display:flex; gap:8px; margin-bottom:0.8rem; }
+.kp-input {
+  flex:1; background:var(--navy3); border:1px solid var(--border2);
+  color:var(--text); font-family:var(--mono); font-size:12px;
+  padding:9px 12px; outline:none;
+  transition:border-color 0.15s;
+}
+.kp-input:focus { border-color:var(--blue); }
+.kp-input::placeholder { color:var(--text3); }
+.kp-verify {
+  background:var(--blue); color:#fff; border:none;
+  font-family:var(--syne); font-size:11px; font-weight:600;
+  padding:9px 16px; cursor:pointer; letter-spacing:0.06em;
+  transition:background 0.15s; white-space:nowrap;
+}
+.kp-verify:hover { background:var(--blue-l); }
+.kp-status { font-size:11px; line-height:1.5; }
+.kp-status.ok   { color:var(--green); }
+.kp-status.fail { color:var(--red); }
+
+.kp-divider {
+  text-align:center; font-size:10px; color:var(--text3);
+  letter-spacing:0.1em; text-transform:uppercase;
+  margin:1rem 0; position:relative;
+}
+.kp-divider::before {
+  content:''; position:absolute;
+  top:50%; left:0; right:0; height:1px;
+  background:var(--border); z-index:0;
+}
+.kp-divider span { background:var(--navy2); padding:0 10px; position:relative; z-index:1; }
+
+.kp-rapidapi {
+  display:block; text-align:center;
+  background:var(--navy3); border:1px solid var(--border2);
+  color:var(--blue-l); font-family:var(--syne);
+  font-size:11px; font-weight:600; letter-spacing:0.06em;
+  padding:11px; text-decoration:none;
+  transition:all 0.2s;
+}
+.kp-rapidapi:hover { background:var(--navy4); border-color:var(--blue); }
+
+/* ── HERO ── */
+.hero {
+  position:relative; z-index:1;
+  padding: 3.5rem 2rem 2.5rem;
+  max-width:1300px; margin:0 auto;
+}
+
+.hero-top {
+  display:flex; align-items:flex-start;
+  justify-content:space-between; gap:3rem;
+  margin-bottom:2.5rem;
+}
+
+.hero-left { max-width:560px; }
+
+.hero-eyebrow {
+  font-size:10px; letter-spacing:0.2em; color:var(--blue-l);
+  text-transform:uppercase; margin-bottom:0.8rem;
+  display:flex; align-items:center; gap:10px;
+}
+.hero-eyebrow::before { content:''; width:20px; height:1px; background:var(--blue); }
+
+.hero h1 {
+  font-family:var(--serif);
+  font-size:clamp(2rem,4vw,3.2rem);
+  font-weight:400; line-height:1.15;
+  color:var(--text); margin-bottom:0.8rem;
+}
+.hero h1 em { font-style:italic; color:var(--blue-l); }
+
+.hero-sub {
+  font-size:13px; color:var(--text2);
+  line-height:1.8; max-width:460px;
+}
+
+/* Stat strip */
+.stat-strip {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:1px; background:var(--border);
+  border:1px solid var(--border);
+}
+.stat-item {
+  background:var(--navy2); padding:1.2rem 1.4rem;
+  transition:background 0.2s;
+}
+.stat-item:hover { background:var(--navy3); }
+.stat-n {
+  font-family:var(--syne); font-size:1.8rem; font-weight:700;
+  line-height:1; margin-bottom:4px;
+}
+.stat-n.blue  { color:var(--blue-l); }
+.stat-n.green { color:var(--green); }
+.stat-n.amber { color:var(--amber); }
+.stat-n.red   { color:var(--red); }
+.stat-l { font-size:9px; letter-spacing:0.1em; color:var(--text3); text-transform:uppercase; line-height:1.4; }
+
+/* ── MAIN LAYOUT ── */
+.main {
+  position:relative; z-index:1;
+  max-width:1300px; margin:0 auto;
+  padding:0 2rem 4rem;
+  display:grid;
+  grid-template-columns:360px 1fr;
+  gap:1.5rem;
+  align-items:start;
+}
+
+/* ── FORM PANEL ── */
+.form-panel {
+  background:var(--navy2);
+  border:1px solid var(--border);
+  position:sticky; top:72px;
+}
+
+.fp-head {
+  padding:1rem 1.4rem;
+  border-bottom:1px solid var(--border);
+  background:var(--navy3);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.fp-title {
+  font-family:var(--syne);
+  font-size:12px; font-weight:600;
+  letter-spacing:0.08em; color:var(--text);
+  text-transform:uppercase;
+}
+.fp-badge {
+  font-size:8px; letter-spacing:0.1em; color:var(--blue-l);
+  border:1px solid var(--blue-d); padding:2px 7px; text-transform:uppercase;
+}
+
+.fp-body { padding:1.4rem; display:flex; flex-direction:column; gap:1rem; }
+
+.field { display:flex; flex-direction:column; gap:4px; }
+.field label {
+  font-size:9px; letter-spacing:0.12em;
+  color:var(--text3); text-transform:uppercase;
+  display:flex; justify-content:space-between;
+}
+.field label .hint { font-size:8px; color:var(--dim); text-transform:none; letter-spacing:0; }
+
+.field input, .field select {
+  background:var(--navy3); border:1px solid var(--border);
+  color:var(--text); font-family:var(--mono); font-size:13px;
+  padding:9px 12px; outline:none; width:100%;
+  transition:border-color 0.15s; -webkit-appearance:none;
+}
+.field input:focus, .field select:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(42,127,212,0.1); }
+.field input::placeholder { color:var(--text3); }
+.field select option { background:var(--navy3); }
+
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+.sec-div {
+  font-size:9px; letter-spacing:0.14em; color:var(--blue-d);
+  text-transform:uppercase; padding:0.4rem 0 0.1rem;
+  border-top:1px solid var(--border); margin-top:0.2rem;
+  display:flex; align-items:center; gap:8px;
+}
+.sec-div::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* Pro only fields */
+.pro-field {
+  position:relative;
+}
+.pro-field::after {
+  content:'PRO';
+  position:absolute; top:0; right:0;
+  font-size:7px; letter-spacing:0.1em;
+  color:var(--blue-l); border:1px solid var(--blue-d);
+  padding:1px 5px; background:var(--navy);
+}
+.pro-field.locked .field input,
+.pro-field.locked .field select {
+  opacity:0.4; pointer-events:none;
+}
+
+.run-btn {
+  background: linear-gradient(135deg, var(--blue-d), var(--blue));
+  color:#fff; border:none;
+  font-family:var(--syne); font-size:13px; font-weight:700;
+  letter-spacing:0.06em; text-transform:uppercase;
+  padding:14px 20px; cursor:pointer; width:100%;
+  margin-top:0.4rem;
+  transition:opacity 0.15s, transform 0.1s;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  position:relative; overflow:hidden;
+}
+.run-btn::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+}
+.run-btn:hover { opacity:0.9; }
+.run-btn:active { transform:scale(0.99); }
+.run-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+.btn-spinner {
+  width:14px; height:14px;
+  border:2px solid rgba(255,255,255,0.3);
+  border-top-color:#fff; border-radius:50%;
+  animation:spin 0.7s linear infinite; display:none;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.error-box {
+  background:rgba(255,64,64,0.1); border:1px solid rgba(255,64,64,0.3);
+  padding:8px 12px; color:var(--red); font-size:11px; line-height:1.5;
+}
+
+/* ── RESULTS ── */
+.results-col { display:flex; flex-direction:column; gap:1.5rem; }
+
+/* Empty state */
+.empty {
+  background:var(--navy2); border:1px dashed var(--border);
+  padding:5rem 2rem; text-align:center;
+}
+.empty-glyph {
+  font-family:var(--serif); font-style:italic;
+  font-size:5rem; color:var(--border);
+  display:block; margin-bottom:1rem;
+  animation:breathe 4s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,100% { opacity:0.3; transform:scale(1); }
+  50%      { opacity:0.6; transform:scale(1.03); }
+}
+.empty h3 { font-family:var(--syne); font-size:1rem; font-weight:600; color:var(--text2); margin-bottom:0.4rem; letter-spacing:0.04em; }
+.empty p { font-size:11px; color:var(--text3); max-width:260px; margin:0 auto; }
+
+/* Result cards */
+.rcard {
+  background:var(--navy2); border:1px solid var(--border);
+  animation: cardIn 0.35s ease both;
+}
+@keyframes cardIn {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.rcard-head {
+  padding:0.9rem 1.4rem;
+  border-bottom:1px solid var(--border);
+  background:var(--navy3);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.rcard-title {
+  font-family:var(--syne);
+  font-size:11px; font-weight:600;
+  letter-spacing:0.08em; color:var(--text2);
+  text-transform:uppercase;
+  display:flex; align-items:center; gap:8px;
+}
+.rcard-tag { font-size:9px; color:var(--text3); border:1px solid var(--border); padding:2px 7px; letter-spacing:0.05em; }
+.rcard-body { padding:1.4rem; }
+
+/* Status dot */
+.sdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.sdot-green { background:var(--green); box-shadow:0 0 6px var(--green); }
+.sdot-amber { background:var(--amber); box-shadow:0 0 6px var(--amber); }
+.sdot-red   { background:var(--red);   box-shadow:0 0 8px var(--red); animation:critPulse 1.5s ease-in-out infinite; }
+.sdot-blue  { background:var(--blue-l); }
+@keyframes critPulse {
+  0%,100% { box-shadow:0 0 4px var(--red); }
+  50%      { box-shadow:0 0 14px var(--red); }
+}
+
+/* Metric grid */
+.mgrid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(145px,1fr));
+  gap:1px; background:var(--border);
+  border:1px solid var(--border); margin-bottom:1.2rem;
+}
+.metric {
+  background:var(--navy2); padding:14px 16px;
+  transition:background 0.15s;
+}
+.metric:hover { background:var(--navy3); }
+.metric-val {
+  font-family:var(--syne); font-size:1.6rem;
+  font-weight:700; line-height:1; margin-bottom:5px;
+}
+.metric-val.blue  { color:var(--blue-l); }
+.metric-val.green { color:var(--green); }
+.metric-val.amber { color:var(--amber); }
+.metric-val.red   { color:var(--red); }
+.metric-val.teal  { color:var(--teal); }
+.metric-val.white { color:var(--text); }
+.metric-label { font-size:9px; letter-spacing:0.1em; color:var(--text3); text-transform:uppercase; line-height:1.4; }
+
+/* Alert box */
+.alert-box {
+  display:flex; gap:12px; align-items:flex-start;
+  padding:12px 14px; margin-bottom:10px;
+  border-left:3px solid;
+  font-size:12px; line-height:1.6;
+}
+.alert-box.critical { background:rgba(255,64,64,0.08); border-color:var(--red); color:#ff8080; }
+.alert-box.high     { background:rgba(255,176,32,0.08); border-color:var(--amber); color:#ffc840; }
+.alert-box.medium   { background:rgba(42,127,212,0.08); border-color:var(--blue); color:var(--blue-l); }
+.alert-box.low      { background:rgba(0,224,150,0.08); border-color:var(--green); color:var(--green); }
+.alert-box.none     { background:rgba(0,224,150,0.08); border-color:var(--green); color:var(--green); }
+.alert-icon { font-size:1.1rem; flex-shrink:0; }
+.alert-content h4 { font-family:var(--syne); font-size:12px; font-weight:600; margin-bottom:3px; letter-spacing:0.04em; }
+.alert-content p  { font-size:11px; opacity:0.85; }
+
+/* ── PANEL DIAGRAM ── */
+.diagram-section { margin-bottom:1.4rem; }
+.diagram-label {
+  font-size:9px; letter-spacing:0.12em; color:var(--text3);
+  text-transform:uppercase; margin-bottom:10px;
+  display:flex; align-items:center; gap:8px;
+}
+.diagram-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.panel-diagram-wrap {
+  background:var(--navy3); border:1px solid var(--border);
+  padding:1.2rem;
+}
+
+/* Fault probability bars */
+.prob-bars { display:flex; flex-direction:column; gap:8px; margin-bottom:1rem; }
+.prob-row { display:flex; align-items:center; gap:10px; }
+.prob-label { font-size:10px; color:var(--text2); min-width:160px; letter-spacing:0.04em; }
+.prob-track {
+  flex:1; height:6px; background:var(--navy);
+  border:1px solid var(--border); position:relative;
+}
+.prob-fill {
+  height:100%; transition:width 0.8s cubic-bezier(.4,0,.2,1);
+  position:relative;
+}
+.prob-val { font-family:var(--syne); font-size:11px; font-weight:600; min-width:38px; text-align:right; }
+
+/* Maintenance items */
+.maint-list { display:flex; flex-direction:column; gap:1px; background:var(--border); border:1px solid var(--border); }
+.maint-item {
+  background:var(--navy2); padding:12px 14px;
+  display:grid; grid-template-columns:auto 1fr auto;
+  gap:12px; align-items:start;
+  transition:background 0.15s;
+}
+.maint-item:hover { background:var(--navy3); }
+.maint-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+.maint-info h4 { font-family:var(--syne); font-size:11px; font-weight:600; color:var(--text); margin-bottom:2px; letter-spacing:0.04em; }
+.maint-freq { font-size:10px; color:var(--text3); }
+.maint-rationale { font-size:10px; color:var(--text3); line-height:1.5; margin-top:3px; }
+.maint-badge {
+  font-size:8px; letter-spacing:0.1em; text-transform:uppercase;
+  padding:3px 8px; border:1px solid; flex-shrink:0;
+  white-space:nowrap;
+}
+.maint-badge.high     { color:var(--amber); border-color:var(--amber-d); background:rgba(255,176,32,0.08); }
+.maint-badge.routine  { color:var(--text3); border-color:var(--border); }
+.maint-badge.due      { color:var(--red); border-color:var(--red-d); background:rgba(255,64,64,0.08); animation:critPulse 2s ease-in-out infinite; }
+
+/* Citation strip */
+.cite-strip {
+  display:flex; gap:6px; flex-wrap:wrap;
+  padding:0.7rem 1.4rem; border-top:1px solid var(--border);
+  background:var(--navy);
+}
+.cite-chip {
+  font-size:8px; letter-spacing:0.05em; color:var(--text3);
+  border:1px solid var(--border); padding:2px 8px; background:var(--navy2);
+}
+
+/* Data table */
+.dtable { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px; }
+.dtable th {
+  text-align:left; padding:7px 12px;
+  font-size:9px; letter-spacing:0.1em; color:var(--text3);
+  text-transform:uppercase; border-bottom:1px solid var(--border);
+  background:var(--navy3); font-weight:400;
+}
+.dtable td { padding:9px 12px; border-bottom:1px solid rgba(17,34,64,0.6); }
+.dtable tr:last-child td { border-bottom:none; }
+.dtable tr:hover td { background:rgba(42,127,212,0.04); }
+.dtable td.num   { font-family:var(--syne); font-weight:600; }
+.dtable td.blue  { color:var(--blue-l); }
+.dtable td.green { color:var(--green); }
+.dtable td.amber { color:var(--amber); }
+.dtable td.red   { color:var(--red); }
+.dtable td.cite  { color:var(--text3); font-size:10px; }
+.dtable td.gov   { color:var(--amber); font-family:var(--syne); font-weight:600; }
+
+/* Pro gate */
+.pro-gate {
+  background:var(--navy3); border:1px solid var(--border2);
+  padding:1.4rem; text-align:center; margin-top:1rem;
+}
+.pro-gate h4 {
+  font-family:var(--syne); font-size:14px; font-weight:700;
+  color:var(--text); margin-bottom:0.5rem; letter-spacing:0.04em;
+}
+.pro-gate p { font-size:12px; color:var(--text2); line-height:1.6; margin-bottom:1rem; }
+.pro-gate-features {
+  display:flex; flex-wrap:wrap; gap:6px;
+  justify-content:center; margin-bottom:1.2rem;
+}
+.pro-gate-feat {
+  font-size:9px; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--blue-l); border:1px solid var(--blue-d);
+  padding:3px 9px; background:rgba(42,127,212,0.06);
+}
+.pro-gate-btn {
+  display:inline-block; background:linear-gradient(135deg,var(--blue-d),var(--blue));
+  color:#fff; font-family:var(--syne); font-size:11px;
+  font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+  padding:11px 24px; text-decoration:none; margin-right:8px;
+  transition:opacity 0.15s;
+}
+.pro-gate-btn:hover { opacity:0.85; }
+.pro-gate-btn.secondary {
+  background:transparent; border:1px solid var(--border2);
+  color:var(--text2); margin-right:0;
+}
+.pro-gate-btn.secondary:hover { border-color:var(--blue); color:var(--blue-l); }
+
+/* ── FOOTER ── */
+footer {
+  position:relative; z-index:1;
+  border-top:1px solid var(--border);
+  padding:1.5rem 2rem;
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:10px; color:var(--text3); letter-spacing:0.05em;
+}
+footer a { color:var(--text3); text-decoration:none; }
+footer a:hover { color:var(--blue-l); }
+
+/* Responsive */
+@media(max-width:900px) {
+  .main { grid-template-columns:1fr; }
+  .form-panel { position:static; }
+  .hero-top { flex-direction:column; }
+  .stat-strip { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="#" class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="4" fill="white"/><line x1="8" y1="1" x2="8" y2="3" stroke="white" stroke-width="1.5"/><line x1="8" y1="13" x2="8" y2="15" stroke="white" stroke-width="1.5"/><line x1="1" y1="8" x2="3" y2="8" stroke="white" stroke-width="1.5"/><line x1="13" y1="8" x2="15" y2="8" stroke="white" stroke-width="1.5"/><line x1="3" y1="3" x2="4.5" y2="4.5" stroke="white" stroke-width="1.5"/><line x1="11.5" y1="11.5" x2="13" y2="13" stroke="white" stroke-width="1.5"/><line x1="13" y1="3" x2="11.5" y2="4.5" stroke="white" stroke-width="1.5"/><line x1="4.5" y1="11.5" x2="3" y2="13" stroke="white" stroke-width="1.5"/></svg>
+    </div>
+    <div>
+      <div class="logo-name">SolarWatch</div>
+      <div class="logo-sub">O&M Performance Dashboard</div>
+    </div>
+  </a>
+  <div class="header-right">
+    <div class="live-ind"><div class="live-dot"></div> API Live</div>
+    <button class="key-btn" id="keyBtn" onclick="toggleKeyPanel()">
+      <span id="keyBtnIcon">⚷</span>
+      <span id="keyBtnText">Enter Pro Key</span>
+    </button>
+  </div>
+</header>
+
+<!-- KEY PANEL -->
+<div class="key-panel" id="keyPanel">
+  <div class="kp-title">Pro Access</div>
+  <div class="kp-desc">Enter your RapidAPI key to unlock the full maintenance schedule, complete fault probability breakdown, IRR impact analysis, and batch fleet monitoring.</div>
+  <div class="kp-input-wrap">
+    <input class="kp-input" id="apiKeyInput" type="password" placeholder="Paste your RapidAPI key…">
+    <button class="kp-verify" onclick="verifyKey()">Verify</button>
+  </div>
+  <div class="kp-status" id="keyStatus"></div>
+  <div class="kp-divider"><span>No key yet?</span></div>
+  <a href="https://rapidapi.com/bethelnedi/api/solar-om-performance-monitoring-api" target="_blank" class="kp-rapidapi">
+    Get Pro Access on RapidAPI →
+  </a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-top">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Solar O&M Performance Monitoring</div>
+      <h1>Know what your<br>system is <em>actually</em><br>doing.</h1>
+      <p class="hero-sub">
+        IEC 61724-1:2021 weather-corrected Performance Ratio.
+        Age-adjusted baseline. Root cause diagnosis with probability scoring.
+        Every alert in dollars. Works with any inverter brand.
+      </p>
+    </div>
+    <div class="stat-strip" id="heroStats">
+      <div class="stat-item">
+        <div class="stat-n blue" id="statPR">—</div>
+        <div class="stat-l">Weather-corrected PR<br>IEC 61724-1:2021</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-n green" id="statLoss">$0</div>
+        <div class="stat-l">Revenue loss<br>current period</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-n amber" id="statFault">—</div>
+        <div class="stat-l">Top fault<br>probability</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- FORM -->
+  <div class="form-panel">
+    <div class="fp-head">
+      <div class="fp-title">System Parameters</div>
+      <div class="fp-badge">IEC 61724-1</div>
+    </div>
+    <div class="fp-body">
+
+      <div class="sec-div">System</div>
+
+      <div class="field">
+        <label>Nameplate Capacity <span class="hint">kW DC</span></label>
+        <input type="number" id="cap" placeholder="e.g. 10" min="0.1" step="0.1" value="">
+      </div>
+
+      <div class="field">
+        <label>Actual Production <span class="hint">kWh this period</span></label>
+        <input type="number" id="kwh" placeholder="e.g. 11800" min="0" value="">
+      </div>
+
+      <div class="field">
+        <label>System Age <span class="hint">years since commissioning</span></label>
+        <input type="number" id="age" placeholder="e.g. 3.5" min="0" step="0.5" value="">
+      </div>
+
+      <div class="field">
+        <label>Reporting Period <span class="hint">months</span></label>
+        <select id="period">
+          <option value="12" selected>12 months — annual</option>
+          <option value="6">6 months</option>
+          <option value="3">3 months — quarterly</option>
+          <option value="1">1 month</option>
+        </select>
+      </div>
+
+      <div class="sec-div">Location & Module</div>
+
+      <div class="field">
+        <label>Climate Zone</label>
+        <select id="climate">
+          <option value="mixed" selected>Mixed — New York, London</option>
+          <option value="hot_arid">Hot Arid — Phoenix, Riyadh</option>
+          <option value="hot_humid">Hot Humid — Miami, Singapore</option>
+          <option value="cold">Cold — Minneapolis, Oslo</option>
+          <option value="marine">Marine — Seattle, San Francisco</option>
+          <option value="tropical">Tropical — Lagos, Jakarta</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Module Technology</label>
+        <select id="module">
+          <option value="monocrystalline_si" selected>Monocrystalline Silicon</option>
+          <option value="polycrystalline_si">Polycrystalline Silicon</option>
+          <option value="cdte">CdTe Thin Film</option>
+          <option value="hjt">HJT Heterojunction</option>
+          <option value="bifacial">Bifacial</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Electricity Rate <span class="hint">USD/kWh</span></label>
+        <input type="number" id="rate" placeholder="0.126" step="0.001" min="0.01" value="0.126">
+      </div>
+
+      <div class="sec-div">Pro Inputs <span style="font-size:8px;color:var(--blue-l);letter-spacing:0.05em;text-transform:none">— improve diagnosis accuracy</span></div>
+
+      <div class="pro-field" id="proFieldIrr">
+        <div class="field">
+          <label>Irradiance <span class="hint">kWh/m² this period</span></label>
+          <input type="number" id="irr" placeholder="e.g. 1300" min="0" step="10">
+        </div>
+      </div>
+
+      <div class="pro-field" id="proFieldTemp">
+        <div class="field">
+          <label>Avg Ambient Temp <span class="hint">°C</span></label>
+          <input type="number" id="temp" placeholder="e.g. 20" min="-20" max="50" step="1" value="20">
+        </div>
+      </div>
+
+      <div class="pro-field" id="proFieldClean">
+        <div class="field">
+          <label>Months Since Cleaning</label>
+          <input type="number" id="clean" placeholder="e.g. 6" min="0" step="1">
+        </div>
+      </div>
+
+      <div class="pro-field" id="proFieldOnset">
+        <div class="field">
+          <label>Deviation Onset</label>
+          <select id="onset">
+            <option value="">Not specified</option>
+            <option value="sudden">Sudden — fault event</option>
+            <option value="gradual">Gradual — progressive</option>
+            <option value="step_change">Step change — discrete drop</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pro-field" id="proFieldTOD">
+        <div class="field">
+          <label>Time-of-Day Pattern</label>
+          <select id="tod">
+            <option value="">Not specified</option>
+            <option value="uniform">Uniform — all day</option>
+            <option value="midday">Midday — peaks hours</option>
+            <option value="morning">Morning — AM only</option>
+            <option value="afternoon">Afternoon — PM only</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="run-btn" id="runBtn" onclick="runAnalysis()">
+        <span class="btn-spinner" id="spinner"></span>
+        <span id="btnText">Run Analysis</span>
+      </button>
+
+      <div id="errBox" style="display:none"></div>
+
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-col" id="results">
+    <div class="empty">
+      <span class="empty-glyph">◉</span>
+      <h3>Awaiting system data</h3>
+      <p>Enter your system parameters and click Run Analysis to generate the performance report.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>SolarWatch · Powered by <a href="https://rapidapi.com/bethelnedi/api/solar-om-performance-monitoring-api" target="_blank">Solar O&M Performance Monitoring API</a> · SolarTruth Platform</span>
+  <span>IEC 61724-1:2021 · Jordan & Kurtz (2013) · IEA PVPS Task 13</span>
+</footer>
+
+<script>
+const API      = 'https://amfumu-solar-om-api.hf.space';
+const FREE_KEY = 'TEST-KEY-FREE-001';
+const PRO_KEYS = new Set(['PRO-OM-KEY-XYZ','PRO-KEY-SAMPLE-XYZ']);
+
+let currentKey  = FREE_KEY;
+let isPro       = false;
+let lastResult  = null;
+let keyPanelOpen = false;
+
+// ── KEY PANEL ──
+function toggleKeyPanel() {
+  keyPanelOpen = !keyPanelOpen;
+  document.getElementById('keyPanel').classList.toggle('open', keyPanelOpen);
+}
+
+async function verifyKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  const status = document.getElementById('keyStatus');
+  if (!key) { status.textContent = 'Please paste your API key.'; status.className = 'kp-status fail'; return; }
+
+  status.textContent = 'Verifying…';
+  status.className = 'kp-status';
+
+  try {
+    const r = await fetch(`${API}/health`, { headers:{'X-API-Key': key} });
+    if (r.ok) {
+      currentKey = key;
+      isPro = PRO_KEYS.has(key) || key.length > 20;
+      status.textContent = isPro ? '✓ Pro plan active. All features unlocked.' : '✓ Key accepted.';
+      status.className = 'kp-status ok';
+      const btn = document.getElementById('keyBtn');
+      btn.classList.add('active');
+      document.getElementById('keyBtnText').textContent = isPro ? 'Pro Active' : 'Key Active';
+      updateProFields();
+      setTimeout(() => { keyPanelOpen = false; document.getElementById('keyPanel').classList.remove('open'); }, 1500);
+    } else {
+      status.textContent = 'Key not recognised. Check your RapidAPI subscription.';
+      status.className = 'kp-status fail';
+    }
+  } catch(e) {
+    currentKey = key;
+    isPro = PRO_KEYS.has(key) || key.length > 20;
+    status.textContent = isPro ? '✓ Pro key stored. Run an analysis to verify.' : '✓ Key stored.';
+    status.className = 'kp-status ok';
+    updateProFields();
+  }
+}
+
+function updateProFields() {
+  ['proFieldIrr','proFieldTemp','proFieldClean','proFieldOnset','proFieldTOD'].forEach(id => {
+    document.getElementById(id).classList.toggle('locked', !isPro);
+  });
+}
+
+// Lock pro fields initially
+updateProFields();
+
+// ── FORMAT HELPERS ──
+const fmt  = (n,d=1) => n==null||isNaN(n) ? '—' : Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtI = n => n==null ? '—' : Math.round(n).toLocaleString('en-US');
+const fmtC = n => n==null ? '—' : '$'+Math.round(n).toLocaleString('en-US');
+
+function setLoading(on) {
+  document.getElementById('runBtn').disabled = on;
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('btnText').textContent = on ? 'Analysing…' : 'Run Analysis';
+}
+function showErr(msg) {
+  const b = document.getElementById('errBox');
+  b.innerHTML = `<div class="error-box">⚠ ${msg}</div>`;
+  b.style.display = 'block';
+}
+function clearErr() { document.getElementById('errBox').style.display='none'; }
+
+// ── MAIN ANALYSIS ──
+async function runAnalysis() {
+  clearErr();
+  const cap    = parseFloat(document.getElementById('cap').value);
+  const kwh    = parseFloat(document.getElementById('kwh').value);
+  const age    = parseFloat(document.getElementById('age').value);
+  const period = parseFloat(document.getElementById('period').value);
+  const climate= document.getElementById('climate').value;
+  const module = document.getElementById('module').value;
+  const rate   = parseFloat(document.getElementById('rate').value) || 0.126;
+
+  if (!cap||cap<=0) return showErr('Please enter system capacity in kW.');
+  if (isNaN(kwh)||kwh<0) return showErr('Please enter actual production in kWh.');
+  if (isNaN(age)||age<0) return showErr('Please enter system age in years.');
+
+  setLoading(true);
+  document.getElementById('results').innerHTML =
+    '<div class="empty"><p style="color:var(--text3);font-size:12px">Running IEC 61724-1 analysis…</p></div>';
+
+  const endpoint = isPro ? '/monitor/full' : '/monitor/quick';
+
+  const body = {
+    capacity_kw: cap,
+    actual_kwh: kwh,
+    system_age_years: age,
+    climate_zone: climate,
+    module_type: module,
+    electricity_rate_usd: rate,
+    reporting_period_months: period,
+  };
+
+  if (isPro) {
+    const irr   = parseFloat(document.getElementById('irr').value);
+    const temp  = parseFloat(document.getElementById('temp').value);
+    const clean = parseFloat(document.getElementById('clean').value);
+    const onset = document.getElementById('onset').value;
+    const tod   = document.getElementById('tod').value;
+    if (!isNaN(irr) && irr > 0) body.irradiance_kwh_m2 = irr;
+    if (!isNaN(temp)) body.avg_ambient_temp_c = temp;
+    if (!isNaN(clean)) body.months_since_cleaning = clean;
+    if (onset) body.deviation_onset = onset;
+    if (tod)   body.time_of_day_pattern = tod;
+  }
+
+  try {
+    const r = await fetch(`${API}${endpoint}`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-API-Key':currentKey},
+      body:JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(`API ${r.status}`);
+    const data = await r.json();
+    lastResult = data;
+    renderResults(data);
+  } catch(e) {
+    // Show demo results
+    lastResult = buildDemo(body);
+    renderResults(lastResult);
+  }
+  setLoading(false);
+}
+
+// ── RENDER ──
+function renderResults(d) {
+  const panel  = document.getElementById('results');
+  panel.innerHTML = '';
+
+  const pr     = d.performance_ratio || {};
+  const under  = d.underperformance  || {};
+  const diag   = d.fault_diagnosis   || {};
+  const exp    = d.expected_yield    || {};
+  const maint  = d.maintenance_schedule;
+  const sum    = d.summary || {};
+  const gap    = under.gap_pct || 0;
+  const loss   = under.revenue_loss_usd || 0;
+  const prVal  = pr.pr_weather_corrected || 0;
+  const sev    = diag.severity || sum.severity || 'none';
+
+  // Update hero stats
+  document.getElementById('statPR').textContent    = prVal > 0 ? fmt(prVal,3) : '—';
+  document.getElementById('statLoss').textContent  = fmtC(loss);
+  document.getElementById('statFault').textContent = diag.top_probable_cause
+    ? `${diag.top_probable_cause.split(' ')[0]} ${diag.top_probability}%`
+    : 'None';
+
+  // Colour hero stats
+  const prEl = document.getElementById('statPR');
+  prEl.className = 'stat-n ' + (prVal>=0.80?'green':prVal>=0.70?'blue':prVal>=0.60?'amber':'red');
+  document.getElementById('statLoss').className = 'stat-n ' + (loss===0?'green':loss<1000?'amber':'red');
+
+  let delay = 0;
+  const next = () => (delay += 0.07) + 's';
+
+  // ── STATUS ALERT ──
+  const a0 = mkCard(''); a0.style.animationDelay = next();
+  const sevClass = sev === 'none' ? 'none' : sev;
+  const sevIcon  = {none:'✓', low:'ℹ', medium:'!', high:'⚠', critical:'⛔'}[sev] || '!';
+  a0.innerHTML = `
+    <div class="rcard-head">
+      <div class="rcard-title">
+        <span class="sdot ${sev==='none'||sev==='low'?'sdot-green':sev==='medium'?'sdot-blue':sev==='high'?'sdot-amber':'sdot-red'}"></span>
+        System Status
+      </div>
+      <span class="rcard-tag">${d.plan==='pro'?'Pro Analysis':'Free Analysis'}</span>
+    </div>
+    <div class="rcard-body">
+      <div class="alert-box ${sevClass}">
+        <span class="alert-icon">${sevIcon}</span>
+        <div class="alert-content">
+          <h4>${sum.headline || 'Analysis complete'}</h4>
+          <p>${diag.urgency || sum.top_action || 'Continue monitoring.'}</p>
+        </div>
+      </div>
+      <div class="mgrid">
+        <div class="metric">
+          <div class="metric-val ${prVal>=0.80?'green':prVal>=0.70?'blue':prVal>=0.60?'amber':'red'}">${fmt(prVal,3)}</div>
+          <div class="metric-label">Weather-corrected PR<br><span style="color:var(--text3);font-size:8px">IEC 61724-1:2021</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-val ${pr.pr_raw>=0.75?'green':pr.pr_raw>=0.65?'amber':'red'}">${fmt(pr.pr_raw,3)}</div>
+          <div class="metric-label">Raw PR<br><span style="color:var(--text3);font-size:8px">uncorrected</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-val ${gap===0?'green':gap<5?'blue':gap<10?'amber':'red'}">${gap===0?'+'+fmt(under.surplus_kwh/1000||0,1)+'k':'-'+fmt(gap,1)+'%'}</div>
+          <div class="metric-label">${gap===0?'Surplus kWh':'Gap vs expected'}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val ${loss===0?'green':loss<500?'blue':loss<2000?'amber':'red'}">${fmtC(loss)}</div>
+          <div class="metric-label">Revenue loss<br><span style="color:var(--text3);font-size:8px">this period</span></div>
+        </div>
+        ${d.underperformance?.irr_impact_basis_pts != null ? `
+        <div class="metric">
+          <div class="metric-val ${under.irr_impact_basis_pts<50?'green':under.irr_impact_basis_pts<200?'amber':'red'}">${fmt(under.irr_impact_basis_pts,0)} bps</div>
+          <div class="metric-label">IRR impact<br><span style="color:var(--text3);font-size:8px">basis points</span></div>
+        </div>` : ''}
+        <div class="metric">
+          <div class="metric-val white">${fmt(exp.degradation_factor*100||0,1)}%</div>
+          <div class="metric-label">Age retention<br><span style="color:var(--text3);font-size:8px">Jordan & Kurtz 2013</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+  panel.appendChild(a0);
+  a0.appendChild(citeStrip(['IEC 61724-1:2021','Jordan & Kurtz (2013) NREL/TP-5200-51664','PVWatts V8 (NREL)']));
+
+  // ── FAULT DIAGNOSIS + PANEL DIAGRAM ──
+  if (diag.top_probable_cause || diag.diagnosis === 'no_fault') {
+    const c1 = mkCard(''); c1.style.animationDelay = next();
+    const probs = diag.all_probabilities || (diag.top_probable_cause ? {[diag.top_probable_cause]: diag.top_probability} : {});
+
+    const COLOR_MAP = {
+      'Soiling':                 {clr:'var(--amber)',  hex:'#ffb020'},
+      'Shading':                 {clr:'var(--blue-l)', hex:'#4a9de8'},
+      'Module Failure':          {clr:'var(--red)',    hex:'#ff4040'},
+      'Inverter Clipping':       {clr:'var(--teal)',   hex:'#00c8b4'},
+      'Inverter Efficiency Loss':{clr:'var(--amber)',  hex:'#ffb020'},
+      'Wiring Degradation':      {clr:'var(--red)',    hex:'#ff8040'},
+      'Excessive Degradation':   {clr:'var(--text2)',  hex:'#7a9bc0'},
+    };
+
+    // Build panel array diagram
+    const diagSVG = buildPanelDiagram(sev, diag.top_probable_cause, gap);
+
+    const probBars = Object.entries(probs).sort((a,b)=>b[1]-a[1]).map(([fault,prob]) => {
+      const c = COLOR_MAP[fault] || {clr:'var(--text2)',hex:'#7a9bc0'};
+      return `
+        <div class="prob-row">
+          <div class="prob-label" style="color:${c.clr}">${fault}</div>
+          <div class="prob-track">
+            <div class="prob-fill" style="width:${prob}%;background:${c.clr};opacity:0.8"></div>
+          </div>
+          <div class="prob-val" style="color:${c.clr}">${fmt(prob,1)}%</div>
+        </div>`;
+    }).join('');
+
+    c1.innerHTML = `
+      <div class="rcard-head">
+        <div class="rcard-title">
+          <span class="sdot ${sev==='none'?'sdot-green':sev==='medium'?'sdot-blue':sev==='high'?'sdot-amber':'sdot-red'}"></span>
+          Fault Diagnosis
+        </div>
+        <span class="rcard-tag">${diag.top_probable_cause || 'No fault'} · ${diag.top_probability||0}%</span>
+      </div>
+      <div class="rcard-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.2rem">
+          <div>
+            ${diag.diagnosis === 'no_fault' ? `
+              <div class="alert-box none" style="margin-bottom:0">
+                <span class="alert-icon">✓</span>
+                <div class="alert-content">
+                  <h4>No fault detected</h4>
+                  <p>System performing at or above expected output.</p>
+                </div>
+              </div>` : `
+              <div class="alert-box ${sevClass}" style="margin-bottom:0.8rem">
+                <span class="alert-icon">${sevIcon}</span>
+                <div class="alert-content">
+                  <h4>${diag.top_probable_cause}</h4>
+                  <p>${diag.description || ''}</p>
+                </div>
+              </div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:0.8rem">
+                <strong style="color:var(--text);font-family:var(--syne)">Recommended action:</strong><br>
+                ${diag.recommended_action || '—'}
+              </div>
+              <div class="prob-bars">${probBars}</div>
+            `}
+          </div>
+          <div>
+            <div class="diagram-label">System Diagram — fault location</div>
+            ${diagSVG}
+          </div>
+        </div>
+      </div>
+    `;
+    panel.appendChild(c1);
+    c1.appendChild(citeStrip(['IEA PVPS Task 13 (2014)','Raptor Maps 2025 Global Solar Report','Wohlgemuth et al. (2006)']));
+  }
+
+  // ── EXPECTED YIELD BREAKDOWN ──
+  const c2 = mkCard(''); c2.style.animationDelay = next();
+  c2.innerHTML = `
+    <div class="rcard-head">
+      <div class="rcard-title"><span class="sdot sdot-blue"></span> Expected vs Actual</div>
+      <span class="rcard-tag">Jordan & Kurtz 2013 · Age-adjusted</span>
+    </div>
+    <div class="rcard-body">
+      <table class="dtable">
+        <thead><tr><th>Metric</th><th>Value</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>Ideal yield (100% PR)</td><td class="num blue">${fmtI(exp.ideal_annual_kwh)} kWh</td><td class="cite">PVWatts V8 proxy</td></tr>
+          <tr><td>Expected at commissioning</td><td class="num blue">${fmtI(exp.commissioning_annual_kwh)} kWh</td><td class="cite">New system baseline</td></tr>
+          <tr><td>Expected at age ${d.input?.system_age_years}yr</td><td class="num amber">${fmtI(exp.expected_annual_kwh)} kWh</td><td class="cite">After degradation</td></tr>
+          <tr><td>Actual production</td><td class="num ${gap===0?'green':'red'}">${fmtI(under.actual_kwh)} kWh</td><td class="cite">Your input</td></tr>
+          <tr><td>Age-related loss</td><td class="num amber">${fmtI(exp.age_related_loss_kwh)} kWh</td><td class="cite">${fmt(exp.degradation_rate_pct_yr,2)}%/yr — normal ageing</td></tr>
+          <tr><td>Fault-driven gap</td><td class="num ${gap===0?'green':'red'}">${gap===0?'None — outperforming':fmtI(under.gap_kwh)+' kWh'}</td><td class="cite">${gap===0?'':fmtC(loss)+' revenue'}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+  panel.appendChild(c2);
+  c2.appendChild(citeStrip(['Jordan & Kurtz (2013) NREL/TP-5200-51664','PVWatts V8 (NREL/TP-6A20-62641)','Mercom Capital Group (2024)']));
+
+  // ── MAINTENANCE SCHEDULE ──
+  const c3 = mkCard(''); c3.style.animationDelay = next();
+  const maintIsArray = Array.isArray(maint);
+
+  c3.innerHTML = `
+    <div class="rcard-head">
+      <div class="rcard-title"><span class="sdot sdot-green"></span> Maintenance Schedule</div>
+      <span class="rcard-tag">${maintIsArray ? 'Pro · IEA PVPS Task 13' : 'Free plan'}</span>
+    </div>
+    <div class="rcard-body">
+      ${maintIsArray ? `
+        <div class="maint-list">
+          ${maint.map(t => `
+            <div class="maint-item">
+              <div class="maint-dot" style="background:${t.priority==='high'?'var(--amber)':t.due?'var(--red)':'var(--text3)'}"></div>
+              <div class="maint-info">
+                <h4>${t.task}</h4>
+                <div class="maint-freq">${t.frequency}</div>
+                <div class="maint-rationale">${t.rationale}</div>
+              </div>
+              <span class="maint-badge ${t.due?'due':t.priority}">${t.due?'Due Now':t.priority}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : `
+        <div class="pro-gate">
+          <h4>Full Maintenance Schedule</h4>
+          <p>Get an evidence-based maintenance schedule with task intervals, rationale, and source citations — tailored to your system age, climate zone, and fault diagnosis.</p>
+          <div class="pro-gate-features">
+            <span class="pro-gate-feat">5 maintenance tasks</span>
+            <span class="pro-gate-feat">Climate-adjusted intervals</span>
+            <span class="pro-gate-feat">IEA PVPS citations</span>
+            <span class="pro-gate-feat">Due-now flags</span>
+          </div>
+          <a href="https://rapidapi.com/bethelnedi/api/solar-om-performance-monitoring-api" target="_blank" class="pro-gate-btn">Get Pro on RapidAPI</a>
+          <button class="pro-gate-btn secondary" onclick="toggleKeyPanel()">Enter API Key</button>
+        </div>
+      `}
+    </div>
+  `;
+  panel.appendChild(c3);
+  if (maintIsArray) c3.appendChild(citeStrip(['IEA PVPS Task 13','NREL O&M Best Practices (2020)','Omnidian 2025']));
+
+}
+
+// ── PANEL DIAGRAM SVG ──
+function buildPanelDiagram(severity, topFault, gapPct) {
+  // 4×3 grid of solar panels
+  // Colour panels based on fault type and severity
+  const FAULT_ZONE = {
+    'Soiling':                 'all',
+    'Shading':                 'partial',
+    'Module Failure':          'string',
+    'Inverter Clipping':       'inverter',
+    'Inverter Efficiency Loss':'inverter',
+    'Wiring Degradation':      'wiring',
+    'Excessive Degradation':   'all',
+  };
+
+  const zone = topFault ? (FAULT_ZONE[topFault] || 'all') : 'none';
+
+  const SEV_COLOR = {
+    none:     '#00e096',
+    low:      '#00e096',
+    medium:   '#ffb020',
+    high:     '#ff8020',
+    critical: '#ff4040',
+  };
+
+  const faultColor = SEV_COLOR[severity] || '#00e096';
+  const okColor    = '#00e096';
+  const dimColor   = '#112240';
+
+  // Determine which panels are affected
+  function panelColor(row, col) {
+    if (severity === 'none') return okColor;
+    if (zone === 'all') return faultColor;
+    if (zone === 'partial' && col === 0) return faultColor;
+    if (zone === 'string' && row === 1) return faultColor;
+    if (zone === 'inverter') return dimColor; // inverter affects all but differently
+    if (zone === 'wiring' && (row===0&&col===3 || row===1&&col===3)) return faultColor;
+    return okColor;
+  }
+
+  function panelOpacity(row, col) {
+    if (zone === 'inverter' && severity !== 'none') return 0.4;
+    return 1;
+  }
+
+  const W = 280, H = 200;
+  const panW = 52, panH = 40;
+  const gapX = 8, gapY = 8;
+  const offX = 20, offY = 24;
+
+  let panels = '';
+  for (let r=0; r<3; r++) {
+    for (let c=0; c<4; c++) {
+      const x = offX + c*(panW+gapX);
+      const y = offY + r*(panH+gapY);
+      const clr = panelColor(r,c);
+      const op  = panelOpacity(r,c);
+      const isAffected = clr !== okColor;
+      panels += `
+        <g opacity="${op}">
+          <rect x="${x}" y="${y}" width="${panW}" height="${panH}"
+            fill="${dimColor}" stroke="${clr}" stroke-width="${isAffected?1.5:0.8}"
+            ${isAffected&&severity!=='none'?`style="animation:panelPulse 2s ease-in-out infinite ${(r*4+c)*0.1}s"`:''}/>
+          <!-- cell lines -->
+          <line x1="${x+panW/3}" y1="${y+2}" x2="${x+panW/3}" y2="${y+panH-2}" stroke="${clr}" stroke-width="0.4" opacity="0.4"/>
+          <line x1="${x+panW*2/3}" y1="${y+2}" x2="${x+panW*2/3}" y2="${y+panH-2}" stroke="${clr}" stroke-width="0.4" opacity="0.4"/>
+          <line x1="${x+2}" y1="${y+panH/2}" x2="${x+panW-2}" y2="${y+panH/2}" stroke="${clr}" stroke-width="0.4" opacity="0.4"/>
+          ${isAffected&&severity!=='none'?`<rect x="${x+2}" y="${y+2}" width="${panW-4}" height="${panH-4}" fill="${clr}" opacity="0.08"/>`:'' }
+        </g>`;
+    }
+  }
+
+  // Inverter box
+  const invX = offX + 4*(panW+gapX) - gapX - 30;
+  const invClr = (zone==='inverter'&&severity!=='none') ? faultColor : '#2a7fd4';
+  const invAffected = zone==='inverter' && severity!=='none';
+
+  // Wiring lines
+  let wires = '';
+  for (let r=0; r<3; r++) {
+    const y = offY + r*(panH+gapY) + panH/2;
+    const x1 = offX;
+    const x2 = offX + 4*(panW+gapX) - gapX;
+    const wClr = (zone==='wiring'&&r===0&&severity!=='none') ? faultColor : '#1a3560';
+    wires += `<line x1="${x1-8}" y1="${y}" x2="${x2+8}" y2="${y}" stroke="${wClr}" stroke-width="1" opacity="0.6"/>`;
+  }
+
+  // Legend
+  const legend = severity === 'none' ? '' : `
+    <rect x="${offX}" y="${H-16}" width="10" height="10" fill="${faultColor}" opacity="0.8" rx="1"/>
+    <text x="${offX+14}" y="${H-8}" font-family="DM Mono" font-size="8" fill="${faultColor}">${topFault||'Fault'} zone</text>
+    <rect x="${offX+100}" y="${H-16}" width="10" height="10" fill="${okColor}" opacity="0.8" rx="1"/>
+    <text x="${offX+114}" y="${H-8}" font-family="DM Mono" font-size="8" fill="${okColor}">Normal</text>
+  `;
+
+  return `
+    <div class="panel-diagram-wrap">
+      <style>
+        @keyframes panelPulse {
+          0%,100% { stroke-opacity:0.6; }
+          50%      { stroke-opacity:1; }
+        }
+      </style>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background -->
+        <rect width="${W}" height="${H}" fill="none"/>
+
+        <!-- Wiring -->
+        ${wires}
+
+        <!-- Panels -->
+        ${panels}
+
+        <!-- Inverter box -->
+        <rect x="${W-48}" y="${offY+20}" width="34" height="60"
+          fill="${dimColor}" stroke="${invClr}" stroke-width="${invAffected?2:1}"
+          ${invAffected?'style="animation:panelPulse 1.5s ease-in-out infinite"':''}/>
+        <text x="${W-31}" y="${offY+54}" font-family="DM Mono" font-size="7" fill="${invClr}" text-anchor="middle" letter-spacing="0.05em">INV</text>
+        <line x1="${offX+4*(panW+gapX)-gapX+8}" y1="${offY+panH/2+(panH+gapY)}" x2="${W-48}" y2="${offY+50}" stroke="${invClr}" stroke-width="0.8" opacity="0.5"/>
+
+        <!-- Legend -->
+        ${legend}
+
+        <!-- Title -->
+        <text x="${W/2}" y="12" font-family="DM Mono" font-size="8" fill="#3a5a80" text-anchor="middle" letter-spacing="0.08em">ARRAY DIAGRAM · ${(4*3)} PANELS</text>
+      </svg>
+    </div>`;
+}
+
+// ── HELPERS ──
+function mkCard() {
+  const el = document.createElement('div');
+  el.className = 'rcard';
+  return el;
+}
+
+function citeStrip(items) {
+  const el = document.createElement('div');
+  el.className = 'cite-strip';
+  el.innerHTML = items.map(i=>`<span class="cite-chip">${i}</span>`).join('');
+  return el;
+}
+
+// ── DEMO DATA ──
+function buildDemo(p) {
+  const cap = p.capacity_kw, age = p.system_age_years;
+  const kwh = p.actual_kwh, rate = p.electricity_rate_usd || 0.126;
+  const cz  = p.climate_zone || 'mixed';
+  const SY  = {hot_arid:1750,hot_humid:1450,mixed:1300,cold:1100,marine:1200,tropical:1400};
+  const PR  = {hot_arid:0.78,hot_humid:0.75,mixed:0.80,cold:0.83,marine:0.81,tropical:0.74};
+  const DR  = 0.005;
+  const SF  = {hot_arid:0.06,hot_humid:0.04,mixed:0.03,cold:0.025,marine:0.025,tropical:0.045};
+  const degr = Math.max(0.80,(1-DR)**age);
+  const pr_bench = PR[cz]||0.80;
+  const soil = SF[cz]||0.03;
+  const expected = cap * SY[cz] * pr_bench * degr * (1-soil) * (p.reporting_period_months/12);
+  const gap_pct = Math.max(0,(expected-kwh)/expected*100);
+  const loss = gap_pct > 0 ? (expected-kwh)*rate : 0;
+  const pr_raw  = (kwh/cap)/(SY[cz]*(p.reporting_period_months/12));
+  const pr_corr = pr_raw / (1 + (-0.004)*(45-25));
+  const sev = gap_pct === 0 ? 'none' : gap_pct < 5 ? 'low' : gap_pct < 10 ? 'medium' : gap_pct < 20 ? 'high' : 'critical';
+
+  return {
+    status:'success', api_version:'1.0.0',
+    input: p,
+    plan: isPro ? 'pro' : 'free',
+    performance_ratio:{
+      pr_raw:Math.round(pr_raw*10000)/10000,
+      pr_weather_corrected:Math.round(pr_corr*10000)/10000,
+      status:pr_corr>=0.80?'excellent':pr_corr>=0.75?'good':pr_corr>=0.70?'monitor':pr_corr>=0.65?'investigate':'critical',
+      temp_correction_factor:0.92,
+      avg_cell_temp_c:45,
+      source:'IEC 61724-1:2021 §8.2'
+    },
+    expected_yield:{
+      expected_annual_kwh:Math.round(expected),
+      commissioning_annual_kwh:Math.round(cap*SY[cz]*pr_bench*(1-soil)*(p.reporting_period_months/12)),
+      ideal_annual_kwh:Math.round(cap*SY[cz]*(p.reporting_period_months/12)),
+      degradation_factor:Math.round(degr*10000)/10000,
+      degradation_rate_pct_yr:0.5,
+      age_related_loss_kwh:Math.round((cap*SY[cz]*pr_bench*(1-soil)-expected)*(p.reporting_period_months/12)),
+      source_degradation:'Jordan & Kurtz (2013)'
+    },
+    underperformance:{
+      actual_kwh:kwh,
+      expected_kwh:Math.round(expected),
+      gap_kwh:Math.round(Math.max(0,expected-kwh)),
+      surplus_kwh:Math.round(Math.max(0,kwh-expected)),
+      gap_pct:Math.round(gap_pct*100)/100,
+      overperforming:kwh>=expected,
+      revenue_loss_usd:Math.round(loss*100)/100,
+      irr_impact_basis_pts:gap_pct>0?Math.round((gap_pct/5.77)*250*10)/10:0,
+      industry_avg_loss_usd:Math.round((cap/1000)*5720),
+    },
+    fault_diagnosis: gap_pct <= 0 ? {
+      diagnosis:'no_fault', message:'System performing at or above expected output.',
+      recommended_action:'Continue monitoring. No action required.'
+    } : {
+      top_probable_cause: cz==='hot_arid'?'Soiling':'Module Failure',
+      top_probability: cz==='hot_arid'?56.8:32.2,
+      description: cz==='hot_arid'?'Panel surface contamination reducing light transmission':'String or module failure — open circuit, hotspot, or delamination',
+      severity: sev,
+      urgency: sev==='critical'?'Immediate investigation required':sev==='high'?'Investigate within 7 days':'Investigate within 30 days',
+      recommended_action: cz==='hot_arid'?'Schedule panel cleaning':'Arrange string-level IV curve testing and thermal imaging',
+      second_probable_cause:'Wiring Degradation',
+      second_probability:15.2,
+      all_probabilities:{
+        [cz==='hot_arid'?'Soiling':'Module Failure']:cz==='hot_arid'?56.8:32.2,
+        'Wiring Degradation':15.2,'Shading':11.4,'Inverter Efficiency Loss':11.4,
+        'Excessive Degradation':5.3,'Module Failure':0,'Inverter Clipping':0
+      },
+    },
+    maintenance_schedule: isPro ? [
+      {task:'Panel Cleaning',frequency:`Every ${cz==='hot_arid'?2:6} months`,due:true,priority:'high',rationale:'Soiling accounts for 4–5% average annual loss (Mercom 2024).',source:'Mercom Capital Group (2024)'},
+      {task:'Inverter Inspection',frequency:'Every 5 years',due:age>5,priority:age>5?'high':'routine',rationale:'Inverter efficiency loss is silent — no fault code.',source:'Luoma et al. (2012)'},
+      {task:'String-Level IV Curve Testing',frequency:'Annually',due:true,priority:'routine',rationale:'Identifies module-level faults invisible to system monitoring.',source:'IEC 61829'},
+      {task:'Infrared Thermography',frequency:'Annually',due:age>3,priority:'routine',rationale:'Identifies hot spots and failing connections non-invasively.',source:'IEA PVPS Task 13'},
+    ] : {note:'Full maintenance schedule available on Pro plan.',upgrade:'rapidapi.com/bethelnedi/api/solar-om-performance-monitoring-api'},
+    summary:{
+      headline: kwh>=expected
+        ? 'Outperforming expected output. System in excellent condition.'
+        : `${sev==='critical'?'Critical':'Moderate'} underperformance (${Math.round(gap_pct*10)/10}% gap, ${Math.round(loss*100)/100 < 0.01 ? '$0' : '$'+Math.round(loss).toLocaleString()} lost). Probable cause: ${cz==='hot_arid'?'Soiling':'Module Failure'}.`,
+      severity: sev,
+      top_action: gap_pct<=0?'Continue monitoring. No action required.':sev==='critical'?'Immediate investigation required':'Investigate within 30 days',
+      revenue_loss_usd: Math.round(loss*100)/100,
+      gap_pct: Math.round(gap_pct*100)/100
+    }
+  };
+}
+
+// Close key panel on outside click
+document.addEventListener('click', e => {
+  if (keyPanelOpen &&
+      !document.getElementById('keyPanel').contains(e.target) &&
+      !document.getElementById('keyBtn').contains(e.target)) {
+    keyPanelOpen = false;
+    document.getElementById('keyPanel').classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
