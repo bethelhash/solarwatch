@@ -1505,11 +1505,10 @@ function freeLimitMessage() {
   </div>`;
 }
 </script>
-
+<script>
 function _chkDay(){var k='st_dy_'+new Date().toISOString().slice(0,10);return{ok:!localStorage.getItem(k),mark:function(){localStorage.setItem(k,'1');}}}
 function _dayMsg(){return '<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:10px 14px;background:rgba(232,160,32,.08);border:1px solid rgba(232,160,32,.25);font-size:11px;color:#e8a020;font-family:monospace">&#9888; Free daily limit reached. Get Pro for unlimited access. <button onclick="stOpen()" style="background:#e8a020;color:#040c18;border:none;font-size:10px;font-weight:600;padding:6px 14px;cursor:pointer;flex-shrink:0">Get Pro</button></div>';}
-
-
+</script>
 <style id="st-panel-css">
 .st-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:99999;display:none;align-items:center;justify-content:center;padding:1rem}
 .st-overlay.open{display:flex!important}
